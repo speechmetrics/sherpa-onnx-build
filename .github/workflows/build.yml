@@ -1,0 +1,84 @@
+name: Build
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      publish:
+        description: Publish the jars to GitHub Packages
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+jobs:
+  native:
+    name: Native ${{ matrix.platform }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: osx-aarch64
+            os: macos-14
+          - platform: osx-x64
+            os: macos-14   # cross-compiled; sherpa-onnx picks the x86_64 onnxruntime
+          - platform: win-x64
+            os: windows-2022
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - name: Build
+        shell: bash
+        run: scripts/build-native.sh ${{ matrix.platform }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: natives-${{ matrix.platform }}
+          path: natives/${{ matrix.platform }}
+          if-no-files-found: error
+
+  package:
+    needs: native
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: natives-*
+          path: natives
+      - name: Arrange natives
+        shell: bash
+        run: |
+          for d in natives/natives-*; do mv "$d" "natives/${d#natives/natives-}"; done
+          ls -lR natives
+      - name: Fetch the Java API sources
+        shell: bash
+        run: |
+          v=$(cat SHERPA_VERSION)
+          git clone --depth 1 --branch "v$v" https://github.com/k2-fsa/sherpa-onnx.git "work/sherpa-onnx-$v"
+      - name: Check for espeak-ng and build the jars
+        run: ./gradlew --no-daemon checkNoEspeak assemble
+      - uses: actions/upload-artifact@v4
+        with:
+          name: jars
+          path: |
+            build/libs/*.jar
+            build/native-jars/*.jar
+      - name: Publish
+        if: github.event_name == 'workflow_dispatch' && inputs.publish
+        run: ./gradlew --no-daemon publish
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

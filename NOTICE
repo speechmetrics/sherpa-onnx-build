@@ -1,0 +1,17 @@
+The artifacts built here contain:
+
+- sherpa-onnx (https://github.com/k2-fsa/sherpa-onnx) - Apache-2.0
+- ONNX Runtime (https://github.com/microsoft/onnxruntime) - MIT
+- kaldi-native-fbank (https://github.com/csukuangfj/kaldi-native-fbank) - Apache-2.0
+- kaldi-decoder (https://github.com/k2-fsa/kaldi-decoder) - Apache-2.0
+- kaldifst (https://github.com/k2-fsa/kaldifst) - Apache-2.0
+- KISS FFT (https://github.com/mborgerding/kissfft) - BSD-3-Clause
+- OpenFst (https://www.openfst.org) - Apache-2.0
+- simple-sentencepiece (https://github.com/pkufool/simple-sentencepiece) - Apache-2.0
+- Eigen (https://eigen.tuxfamily.org) - MPL-2.0 (unmodified)
+- nlohmann/json (https://github.com/nlohmann/json) - MIT
+- hclust-cpp (https://github.com/cdalitz/hclust-cpp) - BSD-3-Clause
+
+They do NOT contain espeak-ng or piper-phonemize: sherpa-onnx is built
+with SHERPA_ONNX_ENABLE_TTS=OFF, and the build fails if any native
+library contains espeak-ng code.
